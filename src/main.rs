@@ -8,33 +8,7 @@ use chess_lib;
 
 const SQUARE: f32 = 125.0;
 
-/*  
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Col {
-    White, 
-    Black 
-}
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum PieceType {
-    Pawn, 
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
-}
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct Piece {
-    pub piece: PieceType, 
-    pub color: Col, 
-}
-*/
-
-
 struct State {
-    // chessboard: [[Option<Piece>; 8]; 8],
     game: chess_lib::ChessBoard,
     mouse_x: f32,
     mouse_y: f32,
@@ -73,7 +47,7 @@ impl ggez::event::EventHandler<GameError> for State {
             // Color::MAGENTA,
             Color::from_rgb(236, 177, 41),
         )?;
-        dbg!(self.game.turn);
+
         for y in 0..8 {
             for x in 0..8 {
                 if self.square_selected && (self.cur_square_x / SQUARE).floor() as usize == x && (self.cur_square_y / SQUARE).floor() as usize == y {
@@ -138,9 +112,7 @@ impl ggez::event::EventHandler<GameError> for State {
                     }
                 }
             }
-            // here we need to refer to our own board and draw the pieces accordingly
         }
-        // graphics::Image::from_path(ctx, "/w-pawn.png")?;
 
         canvas.finish(ctx)?;
 
@@ -168,13 +140,11 @@ impl ggez::event::EventHandler<GameError> for State {
             self.game.increase_turn();
         }
         self.piece_selected = false;
-        // check if the current position 
         Ok(())
     }
     
     fn mouse_button_up_event(&mut self,_ctx: &mut Context, button: MouseButton, x_pos: f32, y_pos: f32) -> GameResult {
         // if it wasnt left click ignore?    
-        
         if self.square_selected { 
             self.square_selected = false;
         }
