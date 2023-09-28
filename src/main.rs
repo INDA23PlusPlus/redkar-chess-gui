@@ -4,11 +4,11 @@ use ggez::graphics::{self, Color, Rect};
 use ggez::GameError;
 use ggez::glam::*;
 use std::{env, path};
-use chess_lib::*;
+use chess_lib;
 
 const SQUARE: f32 = 125.0;
 
-
+/*  
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Col {
     White, 
@@ -30,15 +30,21 @@ pub struct Piece {
     pub piece: PieceType, 
     pub color: Col, 
 }
+*/
 
 
 struct State {
-    chessboard: [[Option<Piece>; 8]; 8],
+    // chessboard: [[Option<Piece>; 8]; 8],
+    game: chess_lib::ChessBoard,
     mouse_x: f32,
     mouse_y: f32,
     cur_square_x: f32,
     cur_square_y: f32,
     square_selected: bool, 
+    piece_selected: bool, 
+    piece_x: usize,
+    piece_y: usize,
+    possible_moves: Vec<(usize, usize)>,
     // we need to make a board ourselves starting at the starting position
 }
 
@@ -67,7 +73,7 @@ impl ggez::event::EventHandler<GameError> for State {
             // Color::MAGENTA,
             Color::from_rgb(236, 177, 41),
         )?;
-
+        dbg!(self.game.turn);
         for y in 0..8 {
             for x in 0..8 {
                 if self.square_selected && (self.cur_square_x / SQUARE).floor() as usize == x && (self.cur_square_y / SQUARE).floor() as usize == y {
@@ -85,45 +91,45 @@ impl ggez::event::EventHandler<GameError> for State {
                     canvas.draw(&b_square, Vec2::new(x as f32 * SQUARE, y as f32 * SQUARE));
                 }
 
-                if self.chessboard[y][x].is_some() {
+                if self.game.board[y][x].is_some() {
                     let print_pos = Vec2::new(x as f32 * SQUARE, y as f32 * SQUARE);
-                    match self.chessboard[y][x] {
+                    match &self.game.board[y][x] {
                         Some(p) => {
                             match p  {
-                                Piece{piece: PieceType::Pawn, color: Col::White} => {
+                                chess_lib::ChessPiece::Pawn(chess_lib::Color::White) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/w_pawn.png").unwrap()), print_pos);
                                 },
-                                Piece{piece: PieceType::Pawn, color: Col::Black} => {
+                                chess_lib::ChessPiece::Pawn(chess_lib::Color::Black) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/b_pawn.png").unwrap()), print_pos);
                                 },
-                                Piece{piece: PieceType::Knight, color: Col::White} => {
+                                chess_lib::ChessPiece::Knight(chess_lib::Color::White) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/w_knight.png").unwrap()), print_pos);    
                                 },
-                                Piece{piece: PieceType::Knight, color: Col::Black} => {
+                                chess_lib::ChessPiece::Knight(chess_lib::Color::Black) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/b_knight.png").unwrap()), print_pos);
                                 },
-                                Piece{piece: PieceType::Bishop, color: Col::White} => {
+                                chess_lib::ChessPiece::Bishop(chess_lib::Color::White) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/w_bishop.png").unwrap()), print_pos);
                                 },
-                                Piece{piece: PieceType::Bishop, color: Col::Black} => {
+                                chess_lib::ChessPiece::Bishop(chess_lib::Color::Black) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/b_bishop.png").unwrap()), print_pos); 
                                 },
-                                Piece{piece: PieceType::Rook, color: Col::White} => {
+                                chess_lib::ChessPiece::Rook(chess_lib::Color::White) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/w_rook.png").unwrap()), print_pos); 
                                 },
-                                Piece{piece: PieceType::Rook, color: Col::Black} => {
+                                chess_lib::ChessPiece::Rook(chess_lib::Color::Black) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/b_rook.png").unwrap()), print_pos); 
                                 },
-                                Piece{piece: PieceType::Queen, color: Col::White} => {
+                                chess_lib::ChessPiece::Queen(chess_lib::Color::White) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/w_queen.png").unwrap()), print_pos); 
                                 },
-                                Piece{piece: PieceType::Queen, color: Col::Black} => {
+                                chess_lib::ChessPiece::Queen(chess_lib::Color::Black) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/b_queen.png").unwrap()), print_pos);    
                                 },
-                                Piece{piece: PieceType::King, color: Col::White} => {
+                                chess_lib::ChessPiece::King(chess_lib::Color::White) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/w_king.png").unwrap()), print_pos);  
                                 },
-                                Piece{piece: PieceType::King, color: Col::Black} => {
+                                chess_lib::ChessPiece::King(chess_lib::Color::Black) => {
                                     canvas.draw(&(graphics::Image::from_path(ctx, "/b_king.png").unwrap()), print_pos);
                                 },
                             }
@@ -150,8 +156,18 @@ impl ggez::event::EventHandler<GameError> for State {
 
     fn mouse_button_down_event(&mut self,_ctx: &mut Context, button: MouseButton, x_pos: f32, y_pos: f32) -> GameResult {
         // if it wasnt left click ignore?    
+        if self.square_selected {
+            self.square_selected = false;
+        }
         self.cur_square_x = x_pos;
         self.cur_square_y = y_pos;
+        let cur_x = (self.cur_square_x / SQUARE).floor() as usize; 
+        let cur_y = (self.cur_square_y / SQUARE).floor() as usize;
+        if self.possible_moves.contains(&(cur_x, cur_y)) {
+            self.game.set_piece((self.piece_x, self.piece_y), (cur_x, cur_y));
+            self.game.increase_turn();
+        }
+        self.piece_selected = false;
         // check if the current position 
         Ok(())
     }
@@ -165,9 +181,24 @@ impl ggez::event::EventHandler<GameError> for State {
         else {
             self.square_selected = true;
         }
+        if self.piece_selected {
+            self.piece_selected = false;
+        }
+        else {
+            let cur_x = (self.cur_square_x / SQUARE).floor() as usize; 
+            let cur_y = (self.cur_square_y / SQUARE).floor() as usize;
+            match self.game.select_piece((cur_x, cur_y), &self.game.faction_decider()) {
+                Some(x) => {
+                    self.piece_x = (self.cur_square_x / SQUARE).floor() as usize;
+                    self.piece_y = (self.cur_square_y / SQUARE).floor() as usize;
+                    self.piece_selected = true;                                    
+                    self.possible_moves = x;
+                }
+                None => {}
+            }
+        }
         Ok(())
     }
-
 
 }
 
@@ -180,37 +211,13 @@ fn main() {
         path::PathBuf::from("./resources")
     };
     let state = State {
-        chessboard:  {
-            [[
-                Some(Piece{piece: PieceType::Rook, color: Col::White}),  
-                Some(Piece{piece: PieceType::Knight, color: Col::White}), 
-                Some(Piece{piece: PieceType::Bishop, color: Col::White}), 
-                Some(Piece{piece: PieceType::King, color: Col::White}), 
-                Some(Piece{piece: PieceType::Queen, color: Col::White}), 
-                Some(Piece{ piece: PieceType::Bishop, color: Col::White}), 
-                Some(Piece{piece: PieceType::Knight, color: Col::White}), 
-                Some(Piece{piece: PieceType::Rook, color: Col::White}) 
-            ],
-            [Some(Piece{piece: PieceType::Pawn, color: Col::White}); 8],
-            [None; 8],
-            [None; 8],
-            [None; 8],
-            [None; 8],
-            [Some(Piece{piece: PieceType::Pawn, color: Col::Black}); 8],
-            [
-                Some(Piece{piece: PieceType::Rook, color: Col::Black}),  
-                Some(Piece{piece: PieceType::Knight, color: Col::Black}), 
-                Some(Piece{piece: PieceType::Bishop, color: Col::Black}), 
-                Some(Piece{piece: PieceType::King, color: Col::Black}), 
-                Some(Piece{piece: PieceType::Queen, color: Col::Black}), 
-                Some(Piece{piece: PieceType::Bishop, color: Col::Black}), 
-                Some(Piece{piece: PieceType::Knight, color: Col::Black}), 
-                Some(Piece{piece: PieceType::Rook, color: Col::Black}) 
-            ]]
-        }, 
+        game: chess_lib::ChessBoard::create(), 
         mouse_x: 0.0, mouse_y: 0.0, 
         cur_square_x: 0.0, cur_square_y: 0.0,
+        piece_x: 0, piece_y: 0, 
+        piece_selected: false,
         square_selected: false,
+        possible_moves: Vec::<(usize, usize)>::new(),
     };
 
     let (mut ctx, event_loop) = ggez::ContextBuilder::new("Chess", "Raunak Redkar")
