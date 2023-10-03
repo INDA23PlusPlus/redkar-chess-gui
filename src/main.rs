@@ -6,6 +6,8 @@ use ggez::glam::*;
 use std::{env, path};
 use chess_lib;
 
+mod server;
+
 const SQUARE: f32 = 125.0;
 
 struct State {
@@ -21,6 +23,7 @@ struct State {
     b_queen: graphics::Image,
     w_king: graphics::Image,
     b_king: graphics::Image,
+    // switch out the game with a game from GameServer::game
     game: chess_lib::ChessBoard,
     mouse_x: f32,
     mouse_y: f32,
