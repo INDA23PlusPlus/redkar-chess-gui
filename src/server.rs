@@ -51,30 +51,32 @@ impl GameServer {
     }
     
     pub fn communicate_game(&self) {
-        let state = ServerToClient::State {
-            board: Self::somasz_board_to_protocol_board(self.game.board),
-            moves: todo!(),
-            joever: match self.phase {
-                Some(x) => match x {
-                    Decision => todo!(),
-                    _ => Joever::Ongoing,
+        if let Some(stream) = &self.client {
+            let state = ServerToClient::State {
+                board: Self::somasz_board_to_protocol_board(self.game.board),
+                moves: vec![],
+                joever: match self.phase {
+                    Some(x) => match x {
+                        Phase::Decision => todo!(),
+                        _ => Joever::Ongoing,
+                    },
+                    // little sus to set this as ongoing
+                    None => Joever::Ongoing,
                 },
-                // little sus to set this as ongoin
-                None => Joever::Ongoing,
-            },
-            // putting in random move for now
-            move_made: Move {
-                start_x: 0,
-                start_y: 0,
-                end_x: 0,
-                end_y: 0,
-                promotion: Piece::None,
-            },
-        };
+                // putting in random move for now
+                move_made: chess_network_protocol::Move {
+                    start_x: 0,
+                    start_y: 0,
+                    end_x: 0,
+                    end_y: 0,
+                    promotion: Piece::None,
+                },
+            };
+            serde_json::to_writer(stream, &state).expect("Not able to send");
+        }
         // get a board: [chess_network_protocol::Piece; 8]; 8] by converting from chess_lib::Chessboard.board
         // try to keep track of moves yourself
         // if there is a stream running, make a ServerToClient::State 
-
     }    
     // todo! communicate_decision / Error
     // todo! maybe make a possible_moves generator
