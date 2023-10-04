@@ -51,6 +51,26 @@ impl GameServer {
     }
     
     pub fn communicate_game(&self) {
+        let state = ServerToClient::State {
+            board: Self::somasz_board_to_protocol_board(self.game.board),
+            moves: todo!(),
+            joever: match self.phase {
+                Some(x) => match x {
+                    Decision => todo!(),
+                    _ => Joever::Ongoing,
+                },
+                // little sus to set this as ongoin
+                None => Joever::Ongoing,
+            },
+            // putting in random move for now
+            move_made: Move {
+                start_x: 0,
+                start_y: 0,
+                end_x: 0,
+                end_y: 0,
+                promotion: Piece::None,
+            },
+        };
         // get a board: [chess_network_protocol::Piece; 8]; 8] by converting from chess_lib::Chessboard.board
         // try to keep track of moves yourself
         // if there is a stream running, make a ServerToClient::State 

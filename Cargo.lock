@@ -396,7 +396,7 @@ dependencies = [
 [[package]]
 name = "chess_lib"
 version = "0.1.0"
-source = "git+https://github.com/INDA23PlusPlus/somasz-chess#0e30ca2b7f392b28089650c4318a9e7058e73558"
+source = "git+https://github.com/INDA23PlusPlus/somasz-chess#efabd6ad53a353cf462c26a1f27589fb89f16417"
 
 [[package]]
 name = "clang-sys"

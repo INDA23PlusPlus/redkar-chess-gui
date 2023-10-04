@@ -7,6 +7,7 @@ use std::{env, path};
 use chess_lib;
 
 mod server;
+mod convert;
 
 const SQUARE: f32 = 125.0;
 
