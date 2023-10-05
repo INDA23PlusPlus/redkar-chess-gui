@@ -101,8 +101,8 @@ impl GameProtocol {
         self.server = Some(stream);
     }
     pub fn shake_hand_as_client(&mut self, chosen_color: chess_network_protocol::Color) {
-        let mut received_hs = serde_json::Deserializer::from_reader(&self.
-            server.as_ref().expect("Should have a server if trying to communicate!"));
+        let mut received_hs = serde_json::Deserializer::from_reader(&mut self.
+            server.as_ref().unwrap());
 
         // shake hand that server has opposite color of client
         let sent_hs = ClientToServerHandshake {

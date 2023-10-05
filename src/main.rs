@@ -262,7 +262,7 @@ fn main() {
         "server" => {
             protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
         },
-        "client" => {
+        _ => {
             protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
         },
     };
