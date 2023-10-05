@@ -2,6 +2,8 @@ use std::net::{TcpListener, TcpStream};
 use serde::{Serialize, Deserialize};
 use chess_network_protocol::*;
 
+pub mod convert;
+
 #[derive(Debug, Copy, Clone)]
 pub enum Phase {
     Initialization, 
@@ -14,14 +16,16 @@ pub struct GameProtocol {
     game: chess_lib::ChessBoard, 
     listener: TcpListener, 
     phase: Phase,
-    server: Option<TcpListener>,
+    server: Option<TcpStream>,
     server_found: bool,
     client: Option<TcpStream>,
     client_found: bool,
 }
 
 impl GameProtocol {
-    // common when you are server or client
+
+    // SERVER STARTS HERE
+
     pub fn new_game(game: chess_lib::ChessBoard) -> Self {
         let listener = TcpListener::bind("127.0.0.1:8384").unwrap();
         Self {
@@ -48,29 +52,24 @@ impl GameProtocol {
     } 
 
     pub fn shake_hand_as_server(&mut self) {
-        let c = self.client.as_ref().expect("Should have a stream here");
+        let c = self.client.as_ref().expect("Should have a stream here!");
         let mut received_hs = serde_json::Deserializer::from_reader(c);
         let deserialized = ClientToServerHandshake::deserialize(&mut received_hs).unwrap();
-        /* server_color in form of enum Color
-        match deserialized.server_color {
-            chess_network_protocol::Color => self.phase = Some(Phase::Handshake),
-            _ => panic!("should have a color in the handshake"),
-        }
-        */ 
-        let sending_hs = ServerToClientHandshake {
+
+        let sent_hs = ServerToClientHandshake {
             board: GameProtocol::somasz_board_to_protocol_board(self.game.board),
             moves: vec![],
             features: vec![],
             joever: Joever::Ongoing,
         };
 
-        serde_json::to_writer(c, &sending_hs).expect("failed to send handshake");
+        serde_json::to_writer(c, &sent_hs).expect("failed to send handshake!");
         self.phase = Phase::InPlay;
         // parse deserialized verysion of tcp stream to 
         // need to send ServerToClient Handshake
     }
     
-    pub fn communicate_game_as_server(&self) {
+    pub fn communicate_state_as_server(&self) {
         if let Some(stream) = &self.client {
             let state = ServerToClient::State {
                 board: Self::somasz_board_to_protocol_board(self.game.board),
@@ -90,12 +89,58 @@ impl GameProtocol {
                     promotion: Piece::None,
                 },
             };
-            serde_json::to_writer(stream, &state).expect("Not able to send");
+            serde_json::to_writer(stream, &state).expect("Not able to send game state as server!");
         }
-        // get a board: [chess_network_protocol::Piece; 8]; 8] by converting from chess_lib::Chessboard.board
-        // try to keep track of moves yourself
-        // if there is a stream running, make a ServerToClient::State 
     }    
+
+
+    // CLIENT STARTS HERE
+
+    pub fn connect_to_server(&mut self) {
+        let stream = TcpStream::connect("127.0.0.1:8384").expect("Couldn't connect to server!");
+        self.server = Some(stream);
+    }
+    pub fn shake_hand_as_client(&mut self, chosen_color: chess_network_protocol::Color) {
+        let mut received_hs = serde_json::Deserializer::from_reader(&self.
+            server.as_ref().expect("Should have a server if trying to communicate!"));
+
+        // shake hand that server has opposite color of client
+        let sent_hs = ClientToServerHandshake {
+            server_color: chosen_color,
+        };
+
+        let the_server = self.server.as_ref().expect("Should be connected to server when shaking hand!");
+        serde_json::to_writer(the_server, &sent_hs).unwrap();
+
+    }
+
+    pub fn communicate_move_as_client(&self) {
+        if let Some(stream) = &self.server {
+            let some_move = chess_network_protocol::Move {
+                start_x: 0,
+                start_y: 0,
+                end_x: 0,
+                end_y: 0,
+                promotion: Piece::None,
+            };
+            serde_json::to_writer(stream, &some_move).expect("Not able to send move as client!");
+        }
+    }    
+
+    pub fn resign_as_client(&self) {
+        if let Some(stream) = &self.server {
+            let resignation = ClientToServer::Resign;
+            serde_json::to_writer(stream, &resignation).expect("Not able to resign as client!");
+        }
+    }
+
+    pub fn draw_as_client(&self) {
+        if let Some(stream) = &self.server {
+            let the_draw = ClientToServer::Draw;
+            serde_json::to_writer(stream, &the_draw).expect("Not able to signal draw as client!");
+        }
+    }
+
     // todo! communicate_decision / Error
     // todo! maybe make a possible_moves generator
     // todo! do_move

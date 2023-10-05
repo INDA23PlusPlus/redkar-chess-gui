@@ -6,8 +6,7 @@ use ggez::glam::*;
 use std::{env, path};
 use chess_lib;
 
-mod server;
-mod convert;
+pub mod protocol_utils;
 
 const SQUARE: f32 = 125.0;
 
@@ -248,10 +247,26 @@ fn main() {
 
     let (mut ctx, event_loop) = ggez::ContextBuilder::new("Chess", "Raunak Redkar")
     .add_resource_path(resource_dir)
-    .window_mode(ggez::conf::WindowMode::default().dimensions(SQUARE * 8.0, SQUARE * 8.0))
+    .window_mode(ggez::conf::WindowMode::default().dimensions(SQUARE * 11.0, SQUARE * 8.0))
     .window_setup(ggez::conf::WindowSetup::default().title("redkar-chess-gui"))
     .build()
     .unwrap();
+
+    // add this in ggez text in window later
+    println!("Print client if you wish to be a client, else \"server\" !");
+    let mut response = String::new();
+    std::io::stdin().read_line(&mut response).expect("Failed to read line!");
+    let response = response.as_str();
+             
+    let the_game: protocol_utils::GameProtocol = match response {
+        "server" => {
+            protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
+        },
+        "client" => {
+            protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
+        },
+    };
+
     let state = State {
         game: chess_lib::ChessBoard::create(), 
         mouse_x: 0.0, mouse_y: 0.0, 

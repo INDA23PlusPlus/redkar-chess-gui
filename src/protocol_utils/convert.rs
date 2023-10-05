@@ -1,4 +1,5 @@
-use crate::server::GameProtocol;
+use crate::protocol_utils::GameProtocol;
+
 // hope this works across files
 impl GameProtocol {
     pub fn somasz_to_protocol_piece(somasz_piece: Option<chess_lib::ChessPiece>) -> chess_network_protocol::Piece {
