@@ -1,7 +1,6 @@
-
-use crate::server::GameServer;
+use crate::server::GameProtocol;
 // hope this works across files
-impl GameServer {
+impl GameProtocol {
     pub fn somasz_to_protocol_piece(somasz_piece: Option<chess_lib::ChessPiece>) -> chess_network_protocol::Piece {
         match somasz_piece {
             Some(the_piece) => match the_piece {

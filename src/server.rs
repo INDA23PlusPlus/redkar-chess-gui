@@ -4,28 +4,34 @@ use chess_network_protocol::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Phase {
+    Initialization, 
     Handshake, 
     InPlay,
     Decision,
 }
 
-pub struct GameServer {
+pub struct GameProtocol {
     game: chess_lib::ChessBoard, 
     listener: TcpListener, 
-    phase: Option<Phase>,
+    phase: Phase,
+    server: Option<TcpListener>,
+    server_found: bool,
     client: Option<TcpStream>,
     client_found: bool,
 }
 
-impl GameServer {
+impl GameProtocol {
+    // common when you are server or client
     pub fn new_game(game: chess_lib::ChessBoard) -> Self {
         let listener = TcpListener::bind("127.0.0.1:8384").unwrap();
         Self {
             game: game, 
             listener: listener, 
-            client_found: false,
             client: None,
-            phase: None, 
+            client_found: false,
+            server: None, 
+            server_found: false, 
+            phase: Phase::Initialization, 
         }
     }
 
@@ -41,27 +47,39 @@ impl GameServer {
         }
     } 
 
-    pub fn shake_hand(&mut self) {
-        let c = self.client.as_ref().unwrap();
-        let mut hs = serde_json::Deserializer::from_reader(c);
-        let deserialized = ClientToServerHandshake::deserialize(&mut hs);
+    pub fn shake_hand_as_server(&mut self) {
+        let c = self.client.as_ref().expect("Should have a stream here");
+        let mut received_hs = serde_json::Deserializer::from_reader(c);
+        let deserialized = ClientToServerHandshake::deserialize(&mut received_hs).unwrap();
+        /* server_color in form of enum Color
+        match deserialized.server_color {
+            chess_network_protocol::Color => self.phase = Some(Phase::Handshake),
+            _ => panic!("should have a color in the handshake"),
+        }
+        */ 
+        let sending_hs = ServerToClientHandshake {
+            board: GameProtocol::somasz_board_to_protocol_board(self.game.board),
+            moves: vec![],
+            features: vec![],
+            joever: Joever::Ongoing,
+        };
+
+        serde_json::to_writer(c, &sending_hs).expect("failed to send handshake");
+        self.phase = Phase::InPlay;
         // parse deserialized verysion of tcp stream to 
-        self.phase = Some(Phase::Handshake);
         // need to send ServerToClient Handshake
     }
     
-    pub fn communicate_game(&self) {
+    pub fn communicate_game_as_server(&self) {
         if let Some(stream) = &self.client {
             let state = ServerToClient::State {
                 board: Self::somasz_board_to_protocol_board(self.game.board),
                 moves: vec![],
                 joever: match self.phase {
-                    Some(x) => match x {
-                        Phase::Decision => todo!(),
-                        _ => Joever::Ongoing,
-                    },
+                    Phase::InPlay => Joever::Ongoing, 
+                    Phase::Decision => todo!(),
+                    _ => Joever::Ongoing,
                     // little sus to set this as ongoing
-                    None => Joever::Ongoing,
                 },
                 // putting in random move for now
                 move_made: chess_network_protocol::Move {

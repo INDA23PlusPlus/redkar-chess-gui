@@ -249,6 +249,7 @@ fn main() {
     let (mut ctx, event_loop) = ggez::ContextBuilder::new("Chess", "Raunak Redkar")
     .add_resource_path(resource_dir)
     .window_mode(ggez::conf::WindowMode::default().dimensions(SQUARE * 8.0, SQUARE * 8.0))
+    .window_setup(ggez::conf::WindowSetup::default().title("redkar-chess-gui"))
     .build()
     .unwrap();
     let state = State {
