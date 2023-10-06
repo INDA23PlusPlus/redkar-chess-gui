@@ -10,6 +10,7 @@ pub mod protocol_utils;
 
 const SQUARE: f32 = 125.0;
 
+
 struct State {
     w_pawn: graphics::Image,
     b_pawn: graphics::Image,
@@ -36,6 +37,8 @@ struct State {
     piece_x: usize,
     piece_y: usize,
     possible_moves: Vec<(usize, usize)>,
+    is_server: bool, 
+    is_client: bool, 
     // we need to make a board ourselves starting at the starting position
 }
 
@@ -253,42 +256,124 @@ fn main() {
     .unwrap();
 
     // add this in ggez text in window later
-    println!("Print client if you wish to be a client, else \"server\" !");
+    println!("Print \"client\" if you wish to be a client, else \"server\" if you want to be a server!");
+    println!("Or something else if you don't want to connect!");
     let mut response = String::new();
     std::io::stdin().read_line(&mut response).expect("Failed to read line!");
     let response = response.as_str();
-             
+
+    let mut wants_connection: bool = false;         
+
     let the_game: protocol_utils::GameProtocol = match response {
-        "server" => {
+        "server\r\n" => {
+            wants_connection = true;
+            protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
+        },
+        "client\r\n" => {
+            wants_connection = true;
             protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
         },
         _ => {
+            // just make this something
             protocol_utils::GameProtocol::new_game(chess_lib::ChessBoard::create())
-        },
+        }
     };
 
-    let state = State {
-        game: chess_lib::ChessBoard::create(), 
-        mouse_x: 0.0, mouse_y: 0.0, 
-        mouse_pressed: false,
-        cur_square_x: 0.0, cur_square_y: 0.0,
-        piece_x: 0, piece_y: 0, 
-        piece_selected: false,
-        selected_piece: None,
-        square_selected: false,
-        possible_moves: Vec::<(usize, usize)>::new(),
-        w_pawn: graphics::Image::from_path(&ctx, "/w_pawn.png").unwrap(),
-        b_pawn: graphics::Image::from_path(&ctx, "/b_pawn.png").unwrap(),
-        w_knight: graphics::Image::from_path(&ctx, "/w_knight.png").unwrap(),
-        b_knight: graphics::Image::from_path(&ctx, "/b_knight.png").unwrap(),
-        w_bishop: graphics::Image::from_path(&ctx, "/w_bishop.png").unwrap(),
-        b_bishop: graphics::Image::from_path(&ctx, "/b_bishop.png").unwrap(),
-        w_rook: graphics::Image::from_path(&ctx, "/w_rook.png").unwrap(),
-        b_rook: graphics::Image::from_path(&ctx, "/b_rook.png").unwrap(),
-        w_queen: graphics::Image::from_path(&ctx, "/w_queen.png").unwrap(),
-        b_queen: graphics::Image::from_path(&ctx, "/b_queen.png").unwrap(),
-        w_king: graphics::Image::from_path(&ctx, "/w_king.png").unwrap(),
-        b_king: graphics::Image::from_path(&ctx, "/b_king.png").unwrap(),
-    };
-    ggez::event::run(ctx, event_loop, state);
+    if !wants_connection {
+        let state = State {
+            game: chess_lib::ChessBoard::create(), 
+            mouse_x: 0.0, mouse_y: 0.0, 
+            mouse_pressed: false,
+            cur_square_x: 0.0, cur_square_y: 0.0,
+            piece_x: 0, piece_y: 0, 
+            piece_selected: false,
+            selected_piece: None,
+            square_selected: false,
+            is_server: false,
+            is_client: false,
+            possible_moves: Vec::<(usize, usize)>::new(),
+            w_pawn: graphics::Image::from_path(&ctx, "/w_pawn.png").unwrap(),
+            b_pawn: graphics::Image::from_path(&ctx, "/b_pawn.png").unwrap(),
+            w_knight: graphics::Image::from_path(&ctx, "/w_knight.png").unwrap(),
+            b_knight: graphics::Image::from_path(&ctx, "/b_knight.png").unwrap(),
+            w_bishop: graphics::Image::from_path(&ctx, "/w_bishop.png").unwrap(),
+            b_bishop: graphics::Image::from_path(&ctx, "/b_bishop.png").unwrap(),
+            w_rook: graphics::Image::from_path(&ctx, "/w_rook.png").unwrap(),
+            b_rook: graphics::Image::from_path(&ctx, "/b_rook.png").unwrap(),
+            w_queen: graphics::Image::from_path(&ctx, "/w_queen.png").unwrap(),
+            b_queen: graphics::Image::from_path(&ctx, "/b_queen.png").unwrap(),
+            w_king: graphics::Image::from_path(&ctx, "/w_king.png").unwrap(),
+            b_king: graphics::Image::from_path(&ctx, "/b_king.png").unwrap(),
+        };
+        ggez::event::run(ctx, event_loop, state);
+    }
+    else {
+        // wants some type of connection
+        if let "server\r\n" = response {
+            let server_state = State {
+                game: the_game.game,
+                mouse_x: 0.0, mouse_y: 0.0, 
+                mouse_pressed: false,
+                cur_square_x: 0.0, cur_square_y: 0.0,
+                piece_x: 0, piece_y: 0, 
+                piece_selected: false,
+                selected_piece: None,
+                square_selected: false,
+                is_server: true,
+                is_client: false,
+                possible_moves: Vec::<(usize, usize)>::new(),
+                w_pawn: graphics::Image::from_path(&ctx, "/w_pawn.png").unwrap(),
+                b_pawn: graphics::Image::from_path(&ctx, "/b_pawn.png").unwrap(),
+                w_knight: graphics::Image::from_path(&ctx, "/w_knight.png").unwrap(),
+                b_knight: graphics::Image::from_path(&ctx, "/b_knight.png").unwrap(),
+                w_bishop: graphics::Image::from_path(&ctx, "/w_bishop.png").unwrap(),
+                b_bishop: graphics::Image::from_path(&ctx, "/b_bishop.png").unwrap(),
+                w_rook: graphics::Image::from_path(&ctx, "/w_rook.png").unwrap(),
+                b_rook: graphics::Image::from_path(&ctx, "/b_rook.png").unwrap(),
+                w_queen: graphics::Image::from_path(&ctx, "/w_queen.png").unwrap(),
+                b_queen: graphics::Image::from_path(&ctx, "/b_queen.png").unwrap(),
+                w_king: graphics::Image::from_path(&ctx, "/w_king.png").unwrap(),
+                b_king: graphics::Image::from_path(&ctx, "/b_king.png").unwrap(),
+            };
+
+
+
+            ggez::event::run(ctx, event_loop, server_state);
+
+        }
+        else {
+            // it is a client
+            let client_state = State {
+                game: the_game.game,
+                mouse_x: 0.0, mouse_y: 0.0, 
+                mouse_pressed: false,
+                cur_square_x: 0.0, cur_square_y: 0.0,
+                piece_x: 0, piece_y: 0, 
+                piece_selected: false,
+                selected_piece: None,
+                square_selected: false,
+                is_server: false,
+                is_client: true,
+                possible_moves: Vec::<(usize, usize)>::new(),
+                w_pawn: graphics::Image::from_path(&ctx, "/w_pawn.png").unwrap(),
+                b_pawn: graphics::Image::from_path(&ctx, "/b_pawn.png").unwrap(),
+                w_knight: graphics::Image::from_path(&ctx, "/w_knight.png").unwrap(),
+                b_knight: graphics::Image::from_path(&ctx, "/b_knight.png").unwrap(),
+                w_bishop: graphics::Image::from_path(&ctx, "/w_bishop.png").unwrap(),
+                b_bishop: graphics::Image::from_path(&ctx, "/b_bishop.png").unwrap(),
+                w_rook: graphics::Image::from_path(&ctx, "/w_rook.png").unwrap(),
+                b_rook: graphics::Image::from_path(&ctx, "/b_rook.png").unwrap(),
+                w_queen: graphics::Image::from_path(&ctx, "/w_queen.png").unwrap(),
+                b_queen: graphics::Image::from_path(&ctx, "/b_queen.png").unwrap(),
+                w_king: graphics::Image::from_path(&ctx, "/w_king.png").unwrap(),
+                b_king: graphics::Image::from_path(&ctx, "/b_king.png").unwrap(),
+            };
+
+
+
+            ggez::event::run(ctx, event_loop, client_state);
+
+        }
+    }
 }
+

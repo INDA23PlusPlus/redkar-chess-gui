@@ -13,13 +13,13 @@ pub enum Phase {
 }
 
 pub struct GameProtocol {
-    game: chess_lib::ChessBoard, 
-    listener: TcpListener, 
-    phase: Phase,
-    server: Option<TcpStream>,
-    server_found: bool,
-    client: Option<TcpStream>,
-    client_found: bool,
+    pub game: chess_lib::ChessBoard, 
+    pub listener: TcpListener, 
+    pub phase: Phase,
+    pub server: Option<TcpStream>,
+    pub server_found: bool,
+    pub client: Option<TcpStream>,
+    pub client_found: bool,
 }
 
 impl GameProtocol {
@@ -126,6 +126,10 @@ impl GameProtocol {
             serde_json::to_writer(stream, &some_move).expect("Not able to send move as client!");
         }
     }    
+
+    pub fn try_move_as_client(&self, chosen_move: chess_network_protocol::Move) {
+        
+    }
 
     pub fn resign_as_client(&self) {
         if let Some(stream) = &self.server {
